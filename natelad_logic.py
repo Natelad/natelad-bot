@@ -41,8 +41,9 @@ def generate_response(message):
         try:
             response = chat.send_message(message)
             plain_text = response.text.strip()
-            print("[Gemini] Generated response:", plain_text)
-            return plain_text
+            clean_text = plain_text.replace("*", "")  # Remove all asterisks
+            print("[Gemini] Generated response:", clean_text)
+            return clean_text
         except Exception as e:
             print("[Gemini] Failed to generate response:", e)
 
