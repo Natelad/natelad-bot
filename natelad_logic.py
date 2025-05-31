@@ -9,7 +9,6 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 MODEL_NAME = "models/gemini-2.5-flash-preview-05-20"
 
-# Define system prompt with services and pricing
 SYSTEM_PROMPT = (
     "You are Natelad Bot, a professional AI assistant for Natelad Agency, a web design and development company in Harare, Zimbabwe.\n\n"
     "Natelad specializes in:\n"
@@ -53,13 +52,12 @@ def generate_response(message):
 def format_response(text):
     text = text.strip()
 
-    # Replace keywords with emojis and bold formatting (without duplicating asterisks)
     replacements = {
-        r"\bLite Website Package\b": "💡 *Lite Website Package*",
-        r"\bStandard Website Package\b": "⭐ *Standard Website Package*",
-        r"\bE-commerce Website Package\b": "🛒 *E-commerce Website Package*",
-        r"\bMaintenance\b": "🛠️ *Maintenance*",
-        r"\bNatelad\b": "*Natelad*",
+        r"(?<!\*)\bLite Website Package\b(?!\*)": "💡 *Lite Website Package*",
+        r"(?<!\*)\bStandard Website Package\b(?!\*)": "⭐ *Standard Website Package*",
+        r"(?<!\*)\bE-commerce Website Package\b(?!\*)": "🛒 *E-commerce Website Package*",
+        r"(?<!\*)\bMaintenance\b(?!\*)": "🛠️ *Maintenance*",
+        r"(?<!\*)\bNatelad\b(?!\*)": "*Natelad*",
     }
 
     for pattern, replacement in replacements.items():
