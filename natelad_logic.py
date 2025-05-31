@@ -52,16 +52,4 @@ def generate_response(message):
 def format_response(text):
     text = text.strip()
 
-    # Replace keywords with emojis (no stars)
-    replacements = {
-        r"\bLite Website Package\b": "💡 Lite Website Package",
-        r"\bStandard Website Package\b": "⭐ Standard Website Package",
-        r"\bE-commerce Website Package\b": "🛒 E-commerce Website Package",
-        r"\bMaintenance\b": "🛠️ Maintenance",
-        r"\bNatelad\b": "Natelad",
-    }
-
-    for pattern, replacement in replacements.items():
-        text = re.sub(pattern, replacement, text)
-
-    return text
+    #
