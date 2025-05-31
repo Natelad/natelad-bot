@@ -1,5 +1,4 @@
 import os
-import re
 import google.generativeai as genai
 from dotenv import load_dotenv
 
@@ -16,13 +15,13 @@ SYSTEM_PROMPT = (
     "- Custom web development\n"
     "- E-commerce platforms\n"
     "- Maintenance and updates\n\n"
-    "💰 Pricing Packages:\n"
+    "Pricing Packages:\n"
     "- Lite Website Package: $1000\n"
     "- Standard Website Package: Contact for quote\n"
     "- E-commerce Website Package: Contact for quote\n"
     "- Maintenance Plans: Starting at $50/month\n\n"
-    "🌐 Learn more at: https://nateladagency.com\n"
-    "📞 Contact: +263 7xx xxx xxx"
+    "Learn more at: https://nateladagency.com\n"
+    "Contact: +263 7xx xxx xxx"
 )
 
 def start_chat():
@@ -41,15 +40,10 @@ def generate_response(message):
     if chat:
         try:
             response = chat.send_message(message)
-            formatted = format_response(response.text)
-            print("[Gemini] Generated response:", formatted)
-            return formatted
+            plain_text = response.text.strip()
+            print("[Gemini] Generated response:", plain_text)
+            return plain_text
         except Exception as e:
             print("[Gemini] Failed to generate response:", e)
 
     return "⚠️ Sorry, the AI service is currently unavailable. Please try again later."
-
-def format_response(text):
-    text = text.strip()
-
-    #
