@@ -1,5 +1,5 @@
-flask
-python-dotenv
+Flask==3.1.1
+openai==1.13.3
+python-dotenv==1.1.0
 requests
 gunicorn
-openai
