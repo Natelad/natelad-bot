@@ -11,7 +11,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 MODEL_NAME = "models/gemini-2.5-flash-preview-05-20"
 
 SYSTEM_PROMPT = (
-    "You are Natelad Bot, a professional AI assistant for Natelad Agency, "
+    "You are Mellisa, a professional AI assistant for Natelad Agency, "
     "a web design and development company in Harare, Zimbabwe.\n\n"
     "Natelad specializes in:\n"
     "- User-friendly website design\n"
