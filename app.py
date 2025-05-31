@@ -2,14 +2,21 @@ from flask import Flask, request
 import os, requests
 from dotenv import load_dotenv
 from natelad_logic import generate_response
+import openai
 
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 
+# Environment variables
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# OpenAI client
+openai.api_key = OPENAI_API_KEY
 
 @app.route('/webhook', methods=['GET'])
 def verify():
@@ -25,11 +32,16 @@ def verify():
 def webhook():
     data = request.get_json()
     try:
+        # Extract incoming message and sender
         message = data['entry'][0]['changes'][0]['value']['messages'][0]
         user_number = message['from']
         user_text = message['text']['body']
-        reply = generate_response(user_text)
-        send_message(user_number, reply)
+
+        # Get AI-generated response
+        response_text = generate_response(user_text)
+
+        # Send reply via WhatsApp
+        send_message(user_number, response_text)
     except Exception as e:
         print("Webhook error:", e)
     return "OK", 200
@@ -43,9 +55,11 @@ def send_message(recipient_id, message):
     data = {
         "messaging_product": "whatsapp",
         "to": recipient_id,
+        "type": "text",
         "text": {"body": message}
     }
-    requests.post(url, headers=headers, json=data)
+    response = requests.post(url, headers=headers, json=data)
+    print("WhatsApp API response:", response.status_code, response.text)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
