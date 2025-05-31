@@ -1,7 +1,9 @@
-import openai
 import os
+from openai import OpenAI
+from dotenv import load_dotenv
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+load_dotenv()
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def generate_response(message, conversation_history=None):
     if conversation_history is None:
@@ -10,7 +12,7 @@ def generate_response(message, conversation_history=None):
     conversation_history.append({"role": "user", "content": message})
 
     try:
-        response = openai.ChatCompletion.create(
+        response = openai_client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": (
@@ -22,7 +24,7 @@ def generate_response(message, conversation_history=None):
             ],
             max_tokens=300
         )
-        reply = response.choices[0].message['content'].strip()
+        reply = response.choices[0].message.content.strip()
         conversation_history.append({"role": "assistant", "content": reply})
         return reply, conversation_history
 
