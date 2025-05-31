@@ -6,12 +6,10 @@ load_dotenv()
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-model = genai.GenerativeModel(model_name="models/gemini-pro")
+model = genai.GenerativeModel(model_name="gemini-pro")
 
-def generate_response(*args):
+def generate_response(message):
     try:
-        message = args[0]
-
         system_prompt = """
 You are Natelad Bot, a friendly and professional assistant for Natelad Agency. You:
 - Answer client questions about services like branding, web design, automation, AI solutions
@@ -20,7 +18,6 @@ You are Natelad Bot, a friendly and professional assistant for Natelad Agency. Y
 - Are professional, brief, and helpful
 """
 
-        # Combine system prompt and user message
         prompt = f"{system_prompt}\n\nClient: {message}\nNatelad Bot:"
 
         response = model.generate_content([{"role": "user", "parts": [prompt]}])
