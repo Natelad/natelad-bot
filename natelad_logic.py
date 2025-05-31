@@ -6,46 +6,44 @@ load_dotenv()
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# List models for debug purposes
-def list_available_models():
-    try:
-        print("Available models:")
-        models = genai.list_models()
-        for model in models:
-            print(f" - {model.name}")
-    except Exception as e:
-        print("Error listing models:", e)
-
-list_available_models()
-
-# Preferred and fallback model
 PRIMARY_MODEL = "models/gemini-2.5-pro-preview-05-06"
 FALLBACK_MODEL = "models/gemini-2.5-flash-preview-05-20"
 
-# Try to create chat session with primary or fallback model
-def initialize_chat():
-    try:
-        print(f"Trying primary model: {PRIMARY_MODEL}")
-        model = genai.GenerativeModel(PRIMARY_MODEL)
-        return model.start_chat(history=[])
-    except Exception as e:
-        print(f"Primary model failed: {e}")
-        try:
-            print(f"Trying fallback model: {FALLBACK_MODEL}")
-            model = genai.GenerativeModel(FALLBACK_MODEL)
-            return model.start_chat(history=[])
-        except Exception as e2:
-            print(f"Fallback model also failed: {e2}")
-            return None
+def start_chat_with_model(model_name):
+    model = genai.GenerativeModel(model_name)
+    return model.start_chat(history=[])
 
-chat = initialize_chat()
+# Start chats for both models
+try:
+    primary_chat = start_chat_with_model(PRIMARY_MODEL)
+except Exception as e:
+    print(f"Primary model failed to start: {e}")
+    primary_chat = None
+
+try:
+    fallback_chat = start_chat_with_model(FALLBACK_MODEL)
+except Exception as e:
+    print(f"Fallback model failed to start: {e}")
+    fallback_chat = None
 
 def generate_response(message):
-    if chat is None:
-        return "Sorry, the AI chat is currently unavailable."
-    try:
-        response = chat.send_message(message)
-        return response.text.strip()
-    except Exception as e:
-        print("Gemini error during message send:", e)
-        return "Sorry, something went wrong. Please try again later."
+    # Try primary
+    if primary_chat:
+        try:
+            response = primary_chat.send_message(message)
+            return response.text.strip()
+        except Exception as e:
+            if "429" in str(e):
+                print("Quota exceeded on primary model. Trying fallback.")
+            else:
+                print("Primary model failed:", e)
+
+    # Try fallback
+    if fallback_chat:
+        try:
+            response = fallback_chat.send_message(message)
+            return response.text.strip()
+        except Exception as e:
+            print("Fallback model failed:", e)
+
+    return "Sorry, the AI service is currently unavailable. Please try again later."
