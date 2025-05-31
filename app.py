@@ -18,22 +18,32 @@ def verify():
     challenge = request.args.get("hub.challenge")
 
     if mode == "subscribe" and token == VERIFY_TOKEN:
+        print("[Webhook] Verification successful")
         return challenge, 200
+    print("[Webhook] Verification failed")
     return "Verification failed", 403
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.get_json()
+    print("[Webhook] Incoming data:", data)
+
     try:
         message = data['entry'][0]['changes'][0]['value']['messages'][0]
         user_number = message['from']
-        user_text = message['text']['body']
+        user_text = message.get('text', {}).get('body', '')
 
+        if not user_text:
+            print("[Webhook] No text message found")
+            return "OK", 200
+
+        print(f"[Webhook] Received from {user_number}: {user_text}")
         reply = generate_response(user_text)
         send_message(user_number, reply)
 
     except Exception as e:
-        print("Webhook error:", e)
+        print("[Webhook] Error processing message:", e)
+
     return "OK", 200
 
 def send_message(recipient_id, message):
@@ -47,7 +57,10 @@ def send_message(recipient_id, message):
         "to": recipient_id,
         "text": {"body": message}
     }
-    requests.post(url, headers=headers, json=data)
+
+    print(f"[Send] Sending to {recipient_id}: {message}")
+    response = requests.post(url, headers=headers, json=data)
+    print("[Send] WhatsApp API response:", response.status_code, response.text)
 
 if __name__ == "__main__":
     app.run()
