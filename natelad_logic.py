@@ -6,26 +6,38 @@ load_dotenv()
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Use a safer default model
-MODEL_NAME = "models/gemini-2.5-flash-preview-05-20"
+MODEL_NAME = "models/gemini-1.5-flash"  # More stable than the preview
 
-def start_chat():
-    try:
-        model = genai.GenerativeModel(MODEL_NAME)
-        return model.start_chat(history=[])
-    except Exception as e:
-        print(f"[Gemini] Failed to start chat model: {e}")
-        return None
+# Initial context for the bot to remember who it represents
+AGENCY_CONTEXT = """
+You are Natelad Bot, the virtual assistant for Natelad Agency — a professional digital services company.
 
-chat = start_chat()
+Natelad Agency offers:
+- Website design and development
+- AI chatbot integration
+- Branding and digital marketing
+- Social media management
+
+Our pricing is flexible and project-based. Common packages start from:
+- Basic Website: $150+
+- AI Chatbot Integration: $100+
+- Branding Package: $120+
+- Social Media Mgmt: $80/month+
+
+If the user asks for a quote or details, ask qualifying questions like:
+- What service are you interested in?
+- Do you have an existing website or brand?
+- What's your budget or timeline?
+
+Speak politely, clearly, and professionally.
+"""
 
 def generate_response(message):
-    if chat:
-        try:
-            response = chat.send_message(message)
-            print("[Gemini] Generated response:", response.text)
-            return response.text.strip()
-        except Exception as e:
-            print("[Gemini] Failed to generate response:", e)
-
-    return "Sorry, the AI service is currently unavailable. Please try again later."
+    try:
+        model = genai.GenerativeModel(MODEL_NAME)
+        response = model.generate_content(f"{AGENCY_CONTEXT}\n\nUser: {message}\nAssistant:")
+        print("[Gemini] Generated response:", response.text)
+        return response.text.strip()
+    except Exception as e:
+        print("[Gemini] Failed to generate response:", e)
+        return "Sorry, the AI service is currently unavailable. Please try again later."
