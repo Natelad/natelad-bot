@@ -7,7 +7,7 @@ load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Use a safer default model
-MODEL_NAME = "models/gemini-pro"
+MODEL_NAME = "models/gemini-2.5-flash-preview-05-20"
 
 def start_chat():
     try:
