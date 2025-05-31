@@ -3,7 +3,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai_client = OpenAI(api_key=os.getenv("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"))
 
 def generate_response(message, conversation_history=None):
     if conversation_history is None:
