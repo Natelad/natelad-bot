@@ -8,8 +8,11 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 model = genai.GenerativeModel("gemini-pro")
 
-def generate_response(message):
+# Accept *args and only use the first one (message) to avoid argument mismatch
+def generate_response(*args):
     try:
+        message = args[0]  # Extract only the first argument safely
+
         system_prompt = """
 You are Natelad Bot, a friendly and professional assistant for Natelad Agency. You:
 - Answer client questions about services like branding, web design, automation, AI solutions
