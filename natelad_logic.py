@@ -1,43 +1,29 @@
-from flask import Flask, request
+import os
 import google.generativeai as genai
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
-# Use fallback model as primary
-MODEL_NAME = "models/gemini-2.5-flash-preview-05-20"
-
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-chat = genai.GenerativeModel(MODEL_NAME).start_chat()
 
-app = Flask(__name__)
+MODEL_NAME = "models/gemini-2.5-flash-preview-05-20"  # Now the main model
 
-@app.route("/", methods=["GET"])
-def home():
-    return "Natelad Bot is live 🚀"
+def start_chat():
+    model = genai.GenerativeModel(MODEL_NAME)
+    return model.start_chat(history=[])
 
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    try:
-        data = request.get_json()
-        print("Received data:", data)
+try:
+    chat = start_chat()
+except Exception as e:
+    print(f"Model failed to start: {e}")
+    chat = None
 
-        # EXAMPLE format for WhatsApp from Meta or 360dialog
-        message = data["messages"][0]["text"]["body"]
-        sender = data["contacts"][0]["wa_id"]
-        
-        print(f"Message from {sender}: {message}")
+def generate_response(message):
+    if chat:
+        try:
+            response = chat.send_message(message)
+            return response.text.strip()
+        except Exception as e:
+            print("Model failed to generate response:", e)
 
-        response = chat.send_message(message)
-        reply = response.text.strip()
-
-        print("Generated reply:", reply)
-
-        # 👉 IMPORTANT: Render does not send the reply back to WhatsApp. You must use a WhatsApp API provider.
-        # For now, just return 200 OK so the webhook doesn't error.
-        return "OK", 200
-
-    except Exception as e:
-        print("Error handling webhook:", e)
-        return "Error", 500
+    return "Sorry, the AI service is currently unavailable. Please try again later."
