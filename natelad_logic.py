@@ -13,7 +13,7 @@ def generate_response(message, conversation_history=None):
 
     try:
         response = openai_client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": (
                     "You are Natelad Bot, a helpful assistant for Natelad Agency. "
