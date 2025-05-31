@@ -6,10 +6,29 @@ load_dotenv()
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Create a chat session with gemini-pro (v1 endpoint is used under the hood in 0.8+)
-chat = genai.GenerativeModel("gemini-pro").start_chat(history=[])
+# Optional: Check available models
+def list_available_models():
+    try:
+        print("Available models:")
+        models = genai.list_models()
+        for model in models:
+            print(f" - {model.name}")
+    except Exception as e:
+        print("Error listing models:", e)
+
+list_available_models()
+
+# Create a chat session with correct Gemini model
+try:
+    model = genai.GenerativeModel("models/gemini-1.5-pro-latest")
+    chat = model.start_chat(history=[])
+except Exception as e:
+    print("Error initializing Gemini model:", e)
+    chat = None
 
 def generate_response(message):
+    if chat is None:
+        return "Sorry, the AI chat is currently unavailable."
     try:
         response = chat.send_message(message)
         return response.text.strip()
