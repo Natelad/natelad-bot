@@ -26,7 +26,7 @@ def generate_response(message):
                 "Natelad specializes in creating user-friendly and conversion-focused websites. "
                 "Services include website design, development, maintenance, and e-commerce solutions. "
                 "Pricing packages are as follows:\n"
-                "- Lite Website Package: [Price details]\n"
+                "- Lite Website Package: $1000\n"
                 "- Standard Website Package: [Price details]\n"
                 "- E-commerce Website Package: [Price details]\n"
                 "Maintenance plans start at $50/month. "
