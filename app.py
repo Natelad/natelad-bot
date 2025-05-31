@@ -5,8 +5,6 @@ from natelad_logic import generate_response
 
 load_dotenv()
 
-from this code update by adding AI functionality and resonsiveness
-
 app = Flask(__name__)
 
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
