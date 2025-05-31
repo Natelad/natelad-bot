@@ -1,5 +1,6 @@
 from flask import Flask, request
-import os, requests
+import os
+import requests
 from dotenv import load_dotenv
 from natelad_logic import generate_response
 
@@ -17,21 +18,31 @@ def verify():
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
 
-    if mode == "subscribe" and token == VERIFY_TOKEN:
-        return challenge, 200
+    if mode and token:
+        if mode == "subscribe" and token == VERIFY_TOKEN:
+            return challenge, 200
     return "Verification failed", 403
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.get_json()
+
     try:
-        message = data['entry'][0]['changes'][0]['value']['messages'][0]
-        user_number = message['from']
-        user_text = message['text']['body']
-        reply = generate_response(user_text)
-        send_message(user_number, reply)
+        # Safety checks to avoid KeyError
+        if data.get("entry"):
+            changes = data['entry'][0].get("changes")
+            if changes:
+                value = changes[0].get("value")
+                if value and "messages" in value:
+                    message = value['messages'][0]
+                    user_number = message['from']
+                    user_text = message['text']['body']
+
+                    reply = generate_response(user_text)
+                    send_message(user_number, reply)
     except Exception as e:
-        print("Webhook error:", e)
+        print("Webhook error:", str(e))
+
     return "OK", 200
 
 def send_message(recipient_id, message):
@@ -45,7 +56,10 @@ def send_message(recipient_id, message):
         "to": recipient_id,
         "text": {"body": message}
     }
-    requests.post(url, headers=headers, json=data)
+
+    response = requests.post(url, headers=headers, json=data)
+    if response.status_code != 200:
+        print("Failed to send message:", response.text)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host="0.0.0.0", port=5000, debug=True)
