@@ -11,6 +11,9 @@ VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 
+# Temporary in-memory context store
+user_context = {}
+
 @app.route('/webhook', methods=['GET'])
 def verify():
     mode = request.args.get("hub.mode")
@@ -28,7 +31,12 @@ def webhook():
         message = data['entry'][0]['changes'][0]['value']['messages'][0]
         user_number = message['from']
         user_text = message['text']['body']
-        reply = generate_response(user_text)
+
+        # Maintain conversation context
+        history = user_context.get(user_number, [])
+        reply, updated_history = generate_response(user_text, history)
+        user_context[user_number] = updated_history
+
         send_message(user_number, reply)
     except Exception as e:
         print("Webhook error:", e)
