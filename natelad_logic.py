@@ -1,4 +1,5 @@
 import os
+import re
 import google.generativeai as genai
 from dotenv import load_dotenv
 
@@ -8,19 +9,19 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 MODEL_NAME = "models/gemini-2.5-flash-preview-05-20"
 
-# Define system prompt
+# Define system prompt with services and pricing
 SYSTEM_PROMPT = (
     "You are Natelad Bot, a professional AI assistant for Natelad Agency, a web design and development company in Harare, Zimbabwe.\n\n"
     "Natelad specializes in:\n"
     "- User-friendly website design\n"
-    "- Custom development\n"
+    "- Custom web development\n"
     "- E-commerce platforms\n"
     "- Maintenance and updates\n\n"
-    "💰 *Pricing Packages:*\n"
-    "- *Lite Website Package:* $1000\n"
-    "- *Standard Website Package:* Contact for quote\n"
-    "- *E-commerce Website Package:* Contact for quote\n"
-    "- *Maintenance Plans:* Starting at $50/month\n\n"
+    "💰 Pricing Packages:\n"
+    "- Lite Website Package: $1000\n"
+    "- Standard Website Package: Contact for quote\n"
+    "- E-commerce Website Package: Contact for quote\n"
+    "- Maintenance Plans: Starting at $50/month\n\n"
     "🌐 Learn more at: https://nateladagency.com\n"
     "📞 Contact: +263 7xx xxx xxx"
 )
@@ -50,11 +51,18 @@ def generate_response(message):
     return "⚠️ Sorry, the AI service is currently unavailable. Please try again later."
 
 def format_response(text):
-    # Format key elements (basic cleanup or markdown-style enhancement)
     text = text.strip()
-    text = text.replace("Natelad", "*Natelad*")
-    text = text.replace("Lite Website Package", "💡 *Lite Website Package*")
-    text = text.replace("Standard Website Package", "⭐ *Standard Website Package*")
-    text = text.replace("E-commerce Website Package", "🛒 *E-commerce Website Package*")
-    text = text.replace("Maintenance", "🛠️ *Maintenance*")
+
+    # Replace keywords with emojis and bold formatting (without duplicating asterisks)
+    replacements = {
+        r"\bLite Website Package\b": "💡 *Lite Website Package*",
+        r"\bStandard Website Package\b": "⭐ *Standard Website Package*",
+        r"\bE-commerce Website Package\b": "🛒 *E-commerce Website Package*",
+        r"\bMaintenance\b": "🛠️ *Maintenance*",
+        r"\bNatelad\b": "*Natelad*",
+    }
+
+    for pattern, replacement in replacements.items():
+        text = re.sub(pattern, replacement, text)
+
     return text
