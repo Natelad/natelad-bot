@@ -1,12 +1,31 @@
-def generate_response(message):
-    msg = message.lower()
-    if "price" in msg:
-        return "Our pricing details are available at https://nateladagency.com/pricing"
-    elif "call" in msg or "contact" in msg:
-        return "You can call us directly at +263XXXXXXXX."
-    elif "services" in msg or "offer" in msg:
-        return "We offer branding, web design, automation, and more. How can we help your business today?"
-    elif "website" in msg:
-        return "Visit https://nateladagency.com for more information."
-    else:
-        return "Hello! Welcome to Natelad Agency. What service are you interested in?"
+import openai
+import os
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+def generate_response(message, conversation_history=None):
+    if conversation_history is None:
+        conversation_history = []
+
+    conversation_history.append({"role": "user", "content": message})
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": (
+                    "You are Natelad Bot, a helpful assistant for Natelad Agency. "
+                    "Your job is to help clients learn about our services like branding, web design, "
+                    "automation, and pricing. Be professional and conversational."
+                )},
+                *conversation_history
+            ],
+            max_tokens=300
+        )
+        reply = response.choices[0].message['content'].strip()
+        conversation_history.append({"role": "assistant", "content": reply})
+        return reply, conversation_history
+
+    except Exception as e:
+        print("OpenAI API Error:", e)
+        return "Sorry, something went wrong. Please try again.", conversation_history
