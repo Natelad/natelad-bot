@@ -1,4 +1,5 @@
 import os
+import re
 import google.generativeai as genai
 from dotenv import load_dotenv
 
@@ -9,7 +10,8 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 MODEL_NAME = "models/gemini-2.5-flash-preview-05-20"
 
 SYSTEM_PROMPT = (
-    "You are Natelad Bot, a professional AI assistant for Natelad Agency, a web design and development company in Harare, Zimbabwe.\n\n"
+    "You are Natelad Bot, a professional AI assistant for Natelad Agency, "
+    "a web design and development company in Harare, Zimbabwe.\n\n"
     "Natelad specializes in:\n"
     "- User-friendly website design\n"
     "- Custom web development\n"
@@ -21,7 +23,8 @@ SYSTEM_PROMPT = (
     "- E-commerce Website Package: Contact for quote\n"
     "- Maintenance Plans: Starting at $50/month\n\n"
     "Learn more at: https://nateladagency.com\n"
-    "Contact: +263 7xx xxx xxx"
+    "Contact: +263 7xx xxx xxx\n"
+    "Respond only in plain text. Do not use Markdown formatting like *, _, ~, or links."
 )
 
 def start_chat():
@@ -41,7 +44,13 @@ def generate_response(message):
         try:
             response = chat.send_message(message)
             plain_text = response.text.strip()
-            clean_text = plain_text.replace("*", "")  # Remove all asterisks
+
+            # Strip Markdown formatting: asterisks, underscores, tildes, backticks
+            clean_text = re.sub(r'[*_~`]', '', plain_text)
+
+            # Remove markdown-style links [text](url)
+            clean_text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', clean_text)
+
             print("[Gemini] Generated response:", clean_text)
             return clean_text
         except Exception as e:
