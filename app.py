@@ -1,12 +1,12 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, redirect, session, url_for, render_template
 import os, requests
 from dotenv import load_dotenv
 from natelad_logic import generate_response
-from database import log_message, init_db, get_all_conversations
+from chat_store import save_message
 
 load_dotenv()
 app = Flask(__name__)
-init_db()
+app.secret_key = os.getenv("SECRET_KEY", "supersecret")
 
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
@@ -14,8 +14,11 @@ PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 
 @app.route('/webhook', methods=['GET'])
 def verify():
-    if request.args.get("hub.mode") == "subscribe" and request.args.get("hub.verify_token") == VERIFY_TOKEN:
-        return request.args.get("hub.challenge"), 200
+    mode = request.args.get("hub.mode")
+    token = request.args.get("hub.verify_token")
+    challenge = request.args.get("hub.challenge")
+    if mode == "subscribe" and token == VERIFY_TOKEN:
+        return challenge, 200
     return "Verification failed", 403
 
 @app.route('/webhook', methods=['POST'])
@@ -25,18 +28,14 @@ def webhook():
         message = data['entry'][0]['changes'][0]['value']['messages'][0]
         user_number = message['from']
         user_text = message.get('text', {}).get('body', '')
-
         if not user_text:
             return "OK", 200
-
-        log_message(user_number, "user", user_text)
         reply = generate_response(user_text)
-        log_message(user_number, "bot", reply)
+        save_message(user_number, user_text, "user")
+        save_message(user_number, reply, "bot")
         send_message(user_number, reply)
-
     except Exception as e:
-        print("[Webhook] Error processing message:", e)
-
+        print("[Webhook] Error:", e)
     return "OK", 200
 
 def send_message(recipient_id, message):
@@ -52,10 +51,33 @@ def send_message(recipient_id, message):
     }
     requests.post(url, headers=headers, json=data)
 
-@app.route('/dashboard')
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        if request.form['username'] == "admin" and request.form['password'] == "Thunderking":
+            session['logged_in'] = True
+            return redirect("/dashboard")
+        return render_template("login.html", error="Invalid credentials")
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
+
+@app.route("/dashboard")
 def dashboard():
-    messages = get_all_conversations()
-    return render_template("dashboard.html", messages=messages)
+    from chat_store import get_conversations
+    if not session.get("logged_in"):
+        return redirect("/login")
+    user_id = request.args.get("user_id")
+    return render_template("dashboard.html", conversations=get_conversations(user_id), selected_user=user_id)
+
+@app.route("/messages")
+def messages():
+    from chat_store import get_messages
+    user_id = request.args.get("user_id")
+    return get_messages(user_id)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True)
