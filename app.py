@@ -1,11 +1,12 @@
-from flask import Flask, request
+from flask import Flask, request, render_template
 import os, requests
 from dotenv import load_dotenv
 from natelad_logic import generate_response
+from database import log_message, init_db, get_all_conversations
 
 load_dotenv()
-
 app = Flask(__name__)
+init_db()
 
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
@@ -13,32 +14,24 @@ PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 
 @app.route('/webhook', methods=['GET'])
 def verify():
-    mode = request.args.get("hub.mode")
-    token = request.args.get("hub.verify_token")
-    challenge = request.args.get("hub.challenge")
-
-    if mode == "subscribe" and token == VERIFY_TOKEN:
-        print("[Webhook] Verification successful")
-        return challenge, 200
-    print("[Webhook] Verification failed")
+    if request.args.get("hub.mode") == "subscribe" and request.args.get("hub.verify_token") == VERIFY_TOKEN:
+        return request.args.get("hub.challenge"), 200
     return "Verification failed", 403
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.get_json()
-    print("[Webhook] Incoming data:", data)
-
     try:
         message = data['entry'][0]['changes'][0]['value']['messages'][0]
         user_number = message['from']
         user_text = message.get('text', {}).get('body', '')
 
         if not user_text:
-            print("[Webhook] No text message found")
             return "OK", 200
 
-        print(f"[Webhook] Received from {user_number}: {user_text}")
+        log_message(user_number, "user", user_text)
         reply = generate_response(user_text)
+        log_message(user_number, "bot", reply)
         send_message(user_number, reply)
 
     except Exception as e:
@@ -57,10 +50,12 @@ def send_message(recipient_id, message):
         "to": recipient_id,
         "text": {"body": message}
     }
+    requests.post(url, headers=headers, json=data)
 
-    print(f"[Send] Sending to {recipient_id}: {message}")
-    response = requests.post(url, headers=headers, json=data)
-    print("[Send] WhatsApp API response:", response.status_code, response.text)
+@app.route('/dashboard')
+def dashboard():
+    messages = get_all_conversations()
+    return render_template("dashboard.html", messages=messages)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host="0.0.0.0", port=5000)
