@@ -1,25 +1,42 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Natelad Bot Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <title>Natelad Bot Dashboard</title>
+    <script>
+        function fetchMessages(userId) {
+            fetch('/messages?user_id=' + userId)
+                .then(res => res.json())
+                .then(data => {
+                    const box = document.getElementById("chat-box");
+                    box.innerHTML = "";
+                    data.forEach(msg => {
+                        let div = document.createElement("div");
+                        div.innerHTML = `<strong>${msg.role}:</strong> ${msg.message} <em>${msg.timestamp}</em>`;
+                        box.appendChild(div);
+                    });
+                });
+        }
+        setInterval(() => {
+            const user = document.getElementById("current-user").value;
+            if (user) fetchMessages(user);
+        }, 3000);
+    </script>
 </head>
-<body class="bg-gray-100">
-  <div class="max-w-4xl mx-auto p-6">
-    <h1 class="text-3xl font-bold mb-4 text-center text-indigo-600">💬 Natelad Bot Conversations</h1>
-    <div class="bg-white shadow-md rounded-lg p-4 space-y-3 overflow-y-auto h-[70vh]">
-      {% for user_number, sender, message, timestamp in messages %}
-        <div class="flex {{ 'justify-end' if sender == 'bot' else 'justify-start' }}">
-          <div class="max-w-xs px-4 py-2 rounded-lg shadow {{ 'bg-indigo-100 text-right' if sender == 'bot' else 'bg-gray-200' }}">
-            <p class="text-sm text-gray-700"><strong>{{ sender|capitalize }}</strong></p>
-            <p class="text-md">{{ message }}</p>
-            <p class="text-xs text-gray-500 mt-1">{{ timestamp }}</p>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  </div>
+<body>
+    <h2>Natelad Conversations</h2>
+    <a href="/logout">Logout</a>
+    <ul>
+        {% for convo in conversations %}
+            {% if not selected_user %}
+                <li><a href="?user_id={{ convo[0] }}">{{ convo[0] }}</a></li>
+            {% endif %}
+        {% endfor %}
+    </ul>
+    {% if selected_user %}
+        <input type="hidden" id="current-user" value="{{ selected_user }}">
+        <h3>Conversation with {{ selected_user }}</h3>
+        <div id="chat-box" style="border:1px solid #ccc; padding:10px; height:300px; overflow-y:scroll"></div>
+        <a href="/dashboard">Back</a>
+    {% endif %}
 </body>
 </html>
