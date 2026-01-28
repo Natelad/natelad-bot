@@ -1,13 +1,14 @@
 import os
 import re
-import google.generativeai as genai
 from dotenv import load_dotenv
 
 load_dotenv()
 
+import google.generativeai as genai  # provided by google-generativeai
+
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 SYSTEM_PROMPT = (
     "You are NateBot, a professional AI assistant for Natelad Agency, "
@@ -41,7 +42,7 @@ SYSTEM_PROMPT = (
     "4. Portfolio Showcase: Provide examples of past work hosted on the website.\n"
     "5. FAQ: Answer common questions about turnaround time, payment methods, revisions, etc.\n"
     "6. Service Selector: Let users choose between design, development, e-commerce, and maintenance.\n"
-    "7. Human Support: If user types 'agent' or 'speak to a person', notify Panashe or Mellisa to take over.\n\n"
+    "7. Human Support: If user types 'agent' or 'speak to a person', confirm human takeover.\n\n"
     "Contact Information:\n"
     "- Website: https://www.nateladagency.com\n"
     "- Email: nateladstation@gmail.com\n"
@@ -53,33 +54,41 @@ SYSTEM_PROMPT = (
     "Your Developers are Panashe Gunda and Mellisa Bonga."
 )
 
-def start_chat():
+
+def _clean_text(text: str) -> str:
+    t = (text or "").strip()
+    t = re.sub(r"[*_~`]", "", t)  # strip common markdown
+    t = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", t)  # strip markdown links
+    return t.strip()
+
+
+def generate_response(user_message: str, history: list[dict] | None = None) -> str:
+    """
+    user_message: latest user message text (or interactive ID)
+    history: Gemini chat history list in format:
+      [{"role":"user"|"model", "parts":[text]}...]
+    """
     try:
-        model = genai.GenerativeModel(MODEL_NAME)
-        chat = model.start_chat(history=[])
-        chat.send_message(SYSTEM_PROMPT)
-        return chat
-    except Exception as e:
-        print(f"[Gemini] Failed to start chat model: {e}")
-        return None
+        history = history or []
 
-chat = start_chat()
-
-def generate_response(message):
-    if chat:
+        # Prefer system_instruction if supported
         try:
-            response = chat.send_message(message)
-            plain_text = response.text.strip()
+            model = genai.GenerativeModel(
+                MODEL_NAME,
+                system_instruction=SYSTEM_PROMPT
+            )
+            chat = model.start_chat(history=history)
+        except TypeError:
+            # Fallback: inject system prompt as first turn
+            model = genai.GenerativeModel(MODEL_NAME)
+            chat = model.start_chat(history=[{"role": "user", "parts": [SYSTEM_PROMPT]}] + history)
 
-            # Strip Markdown formatting: asterisks, underscores, tildes, backticks
-            clean_text = re.sub(r'[*_~]', '', plain_text)
+        resp = chat.send_message(user_message)
+        out = _clean_text(getattr(resp, "text", "") or "")
+        if out:
+            return out
 
-            # Remove markdown-style links [text](url)
-            clean_text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', clean_text)
-
-            print("[Gemini] Generated response:", clean_text)
-            return clean_text
-        except Exception as e:
-            print("[Gemini] Failed to generate response:", e)
+    except Exception as e:
+        print("[Gemini] Error:", e)
 
     return "⚠️ Sorry, the AI service is currently unavailable. Please try again later."
