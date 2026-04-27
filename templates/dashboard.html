@@ -3,140 +3,169 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Natelad Bot Inbox</title>
+  <title>Natelad Bot Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .chat-bubble { max-width: 70%; }
+    .animate-pulse-slow { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .slide-in { animation: slideIn 0.3s ease-out; }
+  </style>
 </head>
-<body class="bg-gray-100">
-  <div class="max-w-6xl mx-auto p-6">
-    <div class="flex items-center justify-between mb-4">
-      <h1 class="text-3xl font-bold text-indigo-600">💬 Natelad Bot — Agent Inbox</h1>
-      <a class="text-sm text-indigo-700 underline" href="/dashboard">Refresh</a>
+<body class="bg-gradient-to-br from-indigo-50 to-purple-50 min-h-screen">
+  <div class="max-w-7xl mx-auto p-6">
+    
+    <!-- Header -->
+    <div class="bg-white/80 backdrop-blur-md shadow-xl rounded-2xl p-8 mb-8 border border-white/50">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h1 class="text-4xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            <i class="fas fa-robot mr-3"></i>Natelad Bot Dashboard
+          </h1>
+          <p class="text-gray-600 text-lg">Real-time conversation monitoring & management</p>
+        </div>
+        <div class="text-right">
+          <div class="text-3xl font-bold text-indigo-600">{{ conversations|length }} Active Conversations</div>
+          <div class="text-sm text-gray-500">Live Updates • Harare, Zimbabwe</div>
+        </div>
+      </div>
+      
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-gradient-to-r from-green-400 to-green-500 text-white p-4 rounded-xl shadow-lg hover:shadow-2xl transition-all">
+          <div class="text-2xl font-bold">{{ conversations|length }}</div>
+          <div class="text-sm opacity-90">Total Users</div>
+        </div>
+        <div class="bg-gradient-to-r from-blue-400 to-blue-500 text-white p-4 rounded-xl shadow-lg hover:shadow-2xl transition-all">
+          <div class="text-2xl font-bold">{{ messages|length }}</div>
+          <div class="text-sm opacity-90">Messages</div>
+        </div>
+        <div class="bg-gradient-to-r from-purple-400 to-purple-500 text-white p-4 rounded-xl shadow-lg hover:shadow-2xl transition-all">
+          <div class="text-2xl font-bold">{{ active_takeover|length > 0 and 1 or 0 }}</div>
+          <div class="text-sm opacity-90">Human Mode</div>
+        </div>
+        <div class="bg-gradient-to-r from-orange-400 to-orange-500 text-white p-4 rounded-xl shadow-lg hover:shadow-2xl transition-all">
+          <i class="fas fa-bolt text-xl"></i> Live
+        </div>
+      </div>
     </div>
 
-    <div class="grid grid-cols-12 gap-4">
-      <!-- Conversations -->
-      <div class="col-span-4 bg-white rounded-lg shadow p-3 h-[78vh] overflow-y-auto">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="font-semibold">Conversations</h2>
-          <span class="text-xs text-gray-500">Live</span>
-        </div>
-
-        {% for c in conversations %}
-          <a href="/dashboard?phone={{ c.phone }}"
-             class="block p-3 rounded-lg mb-2 hover:bg-gray-50 border {{ 'border-indigo-400' if c.phone==active_phone else 'border-gray-200' }}">
-            <div class="flex items-center justify-between gap-2">
-              <div class="font-medium text-sm truncate">
-                {{ c.username or c.phone }}
-              </div>
-              {% if c.is_human_takeover %}
-                <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">HUMAN</span>
-              {% else %}
-                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">BOT</span>
+    <!-- Conversations List + Chat -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Conversations Sidebar -->
+      <div class="lg:col-span-1">
+        <div class="bg-white/80 backdrop-blur-md shadow-xl rounded-2xl p-6 border border-white/50 sticky top-6 h-[calc(100vh-8rem)] overflow-y-auto">
+          <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-users mr-2 text-indigo-500"></i>Active Conversations
+          </h2>
+          
+          {% if conversations %}
+            {% for conv in conversations %}
+            <a href="{{ url_for('dashboard', phone=conv.phone) }}" 
+               class="block p-4 mb-3 bg-gradient-to-r {{ 'from-indigo-500 to-purple-500' if conv.phone == active_phone else 'from-gray-100 to-gray-200' }} text-white rounded-xl hover:shadow-lg transition-all hover:-translate-y-1 {{ 'ring-4 ring-indigo-200/50 shadow-2xl' if conv.phone == active_phone else '' }}">
+              <div class="font-semibold truncate">{{ conv.username or conv.phone }}</div>
+              <div class="text-xs opacity-90 truncate">{{ conv.last_message[:40] }}...</div>
+              <div class="text-xs opacity-75 mt-1">{{ conv.last_time }}</div>
+              {% if conv.takeover %}
+                <div class="w-2 h-2 bg-red-400 rounded-full mt-1 animate-pulse"></div>
               {% endif %}
+            </a>
+            {% endfor %}
+          {% else %}
+            <div class="text-center py-12 text-gray-500">
+              <i class="fas fa-inbox text-4xl mb-4 opacity-50"></i>
+              <p>No conversations yet</p>
             </div>
-            <div class="text-xs text-gray-500 mt-1 truncate">{{ c.last_text or '' }}</div>
-          </a>
-        {% endfor %}
+          {% endif %}
+        </div>
       </div>
 
-      <!-- Chat -->
-      <div class="col-span-8 bg-white rounded-lg shadow p-3 h-[78vh] flex flex-col">
+      <!-- Main Chat Area -->
+      <div class="lg:col-span-2">
         {% if active_phone %}
-          <div class="flex items-center justify-between border-b pb-2 mb-2">
-            <div>
-              <div class="font-semibold">{{ active_username or active_phone }}</div>
-              <div class="text-xs text-gray-500">Phone: {{ active_phone }}</div>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <form method="POST" action="/set_username" class="flex items-center gap-2">
-                <input type="hidden" name="phone" value="{{ active_phone }}">
-                <input name="username" class="border rounded px-2 py-1 text-sm" placeholder="Set username" />
-                <button class="px-3 py-2 rounded bg-gray-800 text-white text-sm">Save</button>
-              </form>
-
-              <form method="POST" action="/toggle_takeover">
-                <input type="hidden" name="phone" value="{{ active_phone }}">
-                <button class="px-3 py-2 rounded bg-indigo-600 text-white text-sm">
-                  {% if active_takeover %}Return to Bot{% else %}Take Over{% endif %}
-                </button>
-              </form>
-            </div>
-          </div>
-
-          <div id="chatBox" class="flex-1 overflow-y-auto space-y-3 pr-2">
-            {% for m in messages %}
-              <div class="flex {{ 'justify-end' if m.sender in ['bot','human'] else 'justify-start' }}">
-                <div class="max-w-md px-4 py-2 rounded-lg shadow
-                  {{ 'bg-indigo-100 text-right' if m.sender=='bot' else '' }}
-                  {{ 'bg-yellow-100 text-right' if m.sender=='human' else '' }}
-                  {{ 'bg-gray-200' if m.sender=='user' else '' }}">
-                  <div class="text-xs text-gray-600 font-semibold mb-1">{{ m.sender|upper }}</div>
-
-                  {% if m.msg_type in ['image','video','document'] and m.media_path %}
-                    {% set fname = m.media_path.split('/')[-1] %}
-                    {% if m.msg_type == 'image' %}
-                      <img src="/uploads/{{ fname }}" class="rounded mb-2 max-h-64">
-                    {% elif m.msg_type == 'video' %}
-                      <video controls class="rounded mb-2 max-h-64">
-                        <source src="/uploads/{{ fname }}">
-                      </video>
-                    {% else %}
-                      <a class="text-indigo-700 underline" href="/uploads/{{ fname }}" target="_blank">Open document</a>
-                    {% endif %}
+        <div class="bg-white/80 backdrop-blur-md shadow-xl rounded-2xl border border-white/50 overflow-hidden h-[70vh]">
+          
+          <!-- Chat Header -->
+          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 sticky top-0 z-10">
+            <div class="flex items-center">
+              <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-4">
+                <i class="fas fa-user text-xl"></i>
+              </div>
+              <div>
+                <div class="font-bold">{{ active_username or active_phone }}</div>
+                <div class="text-sm opacity-90 flex items-center">
+                  {% if active_takeover %}
+                    <div class="w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse"></div>
+                    <span>Human Takeover Active</span>
+                  {% else %}
+                    <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span>Bot Active</span>
                   {% endif %}
-
-                  {% if m.text %}
-                    <div class="text-sm whitespace-pre-wrap">{{ m.text }}</div>
-                  {% endif %}
-
-                  <div class="text-[11px] text-gray-500 mt-1">{{ m.ts }}</div>
                 </div>
               </div>
-            {% endfor %}
+              <div class="ml-auto flex space-x-2">
+                <form method="POST" action="{{ url_for('toggle_takeover') }}" style="display: inline;">
+                  <input type="hidden" name="phone" value="{{ active_phone }}">
+                  <button type="submit" class="px-4 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-all {{ 'opacity-50 cursor-not-allowed' if not active_takeover else '' }}">
+                    {% if active_takeover %}
+                      <i class="fas fa-robot"></i> Bot Mode
+                    {% else %}
+                      <i class="fas fa-user"></i> Human Mode
+                    {% endif %}
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
 
-          <!-- Composer -->
-          <form class="mt-3 border-t pt-3 flex gap-2" method="POST" action="/send_human" enctype="multipart/form-data">
-            <input type="hidden" name="phone" value="{{ active_phone }}">
-            <input class="flex-1 border rounded px-3 py-2" name="text" placeholder="Type reply as human…">
-            <input type="file" name="file" class="text-sm">
-            <button class="px-4 py-2 rounded bg-green-600 text-white">Send</button>
-          </form>
+          <!-- Messages -->
+          <div id="messages-container" class="p-6 space-y-4 overflow-y-auto h-[calc(70vh-140px)] bg-gradient-to-b from-white/50 to-indigo-50/30">
+            {% for msg in messages %}
+            <div class="flex {{ 'justify-end' if msg.sender == 'bot' else 'justify-start' }} slide-in" data-msg-id="{{ loop.index0 }}">
+              <div class="chat-bubble {{ 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' if msg.sender == 'bot' else 'bg-white border border-gray-200 shadow-sm' }} px-4 py-3 rounded-2xl max-w-[70%]">
+                {% if msg.media_path %}
+                  <div class="mb-2">
+                    {% if 'image' in msg.mime_type %}
+                      <img src="/uploads/{{ msg.media_path.split('/')[-1] }}" class="rounded-lg max-h-48 w-full object-cover">
+                    {% elif 'video' in msg.mime_type %}
+                      <video controls class="rounded-lg max-h-48 w-full">
+                        <source src="/uploads/{{ msg.media_path.split('/')[-1] }}">
+                      </video>
+                    {% else %}
+                      <a href="/uploads/{{ msg.media_path.split('/')[-1] }}" class="text-blue-500 hover:underline" target="_blank">
+                        📎 {{ msg.media_path.split('/')[-1] }}
+                      </a>
+                    {% endif %}
+                  </div>
+                {% endif %}
+                
+                {% if msg.text %}
+                  <div class="whitespace-pre-wrap">{{ msg.text }}</div>
+                {% endif %}
+                
+                <div class="text-xs mt-2 opacity-75 flex items-center justify-between">
+                  <span>{{ msg.timestamp }}</span>
+                  <span class="font-semibold">{{ msg.sender|upper }}</span>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+            
+            {% if not messages %}
+            <div class="text-center py-20 text-gray-500">
+              <i class="fas fa-comments text-6xl mb-4 opacity-30"></i>
+              <p class="text-lg">No messages yet</p>
+              <p>Select a conversation to view chat history</p>
+            </div>
+            {% endif %}
+          </div>
 
-        {% else %}
-          <div class="text-gray-500 m-auto">Select a conversation to view messages.</div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // Simple polling for live updates (only when a chat is open)
-    const activePhone = "{{ active_phone or '' }}";
-    let lastCount = {{ messages|length if messages else 0 }};
-
-    function scrollToBottom() {
-      const box = document.getElementById("chatBox");
-      if (box) box.scrollTop = box.scrollHeight;
-    }
-    scrollToBottom();
-
-    async function poll() {
-      if (!activePhone) return;
-
-      try {
-        const res = await fetch(`/api/messages?phone=${encodeURIComponent(activePhone)}&after=${lastCount}`);
-        const data = await res.json();
-
-        if (data && data.new && data.new.length) {
-          // simplest approach: reload page to avoid DOM complexity
-          window.location.reload();
-        }
-      } catch (e) {}
-    }
-
-    setInterval(poll, 3000);
-  </script>
-</body>
-</html>
+          <!-- Quick Reply -->
+          <div class="bg-gray-50/50 p-4 border-t border-gray-200">
+            <form method="POST" action="{{ url_for('send_human') }}" enctype="multipart/form-data" class="flex space-x-3">
+              <input type="hidden" name="phone" value="{{ active_phone }}">
+              <input type="text" name="text" placeholder="Type quick reply..." 
+                     class="flex-1 px
