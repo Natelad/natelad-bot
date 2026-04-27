@@ -207,7 +207,7 @@ def verify():
 
 
 # ---------------------------
-# Webhook Receive
+# Webhook Receive - FIXED VERSION
 # ---------------------------
 @app.route("/webhook", methods=["POST"])
 def webhook():
@@ -217,9 +217,15 @@ def webhook():
     try:
         value = data["entry"][0]["changes"][0]["value"]
 
-        # Sometimes you'll receive statuses instead of messages
+        # 🔥 FIX #1: Ignore status updates (delivery/read receipts)
+        if value.get("statuses"):
+            print("[Webhook] Ignoring status update")
+            return "OK", 200
+            
+        # 🔥 FIX #2: Ensure we have actual messages
         messages = value.get("messages")
         if not messages:
+            print("[Webhook] No messages found")
             return "OK", 200
 
         msg = messages[0]
@@ -228,6 +234,13 @@ def webhook():
         phone = parsed["phone"]
         if not phone:
             return "OK", 200
+
+        # 🔥 FIX #3: Skip empty messages (no text AND no media)
+        if not parsed["text"] and not parsed["media_path"]:
+            print(f"[Webhook] Empty message from {phone}, skipping")
+            return "OK", 200
+
+        print(f"[Webhook] Processing message from {phone}: '{parsed['text'][:50]}...'")
 
         upsert_user(phone)
 
@@ -254,19 +267,14 @@ def webhook():
 
         # If takeover active -> do NOT auto-reply
         if is_takeover(phone):
+            print(f"[Webhook] Takeover active for {phone}, no auto-reply")
             return "OK", 200
-
-        # Optional: handle interactive IDs with your own routing
-        # Example:
-        # if parsed["type"] == "interactive" and parsed["text"] == "pricing":
-        #     send_text(phone, "Pricing: ZW $30/mo | International $120/mo ...")
-        #     save_message(phone, "bot", "text", "Pricing: ...")
-        #     return "OK", 200
 
         # AI response (per user history)
         history = get_recent_history_for_ai(phone, limit=18)
         reply = generate_response(parsed["text"] or "", history=history)
-
+        
+        print(f"[Webhook] AI reply to {phone}: '{reply[:50]}...'")
         send_text(phone, reply)
         save_message(phone, "bot", "text", reply)
 
