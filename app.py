@@ -1,4 +1,6 @@
-from flask import Flask, request, render_template, redirect, url_for, send_from_directory, jsonify
+from flask import Flask, request, render_template, redirect, url_for, send_from_directory, jsonify, session, flash
+from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import requests
 import secrets
@@ -16,6 +18,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("DASHBOARD_SECRET", secrets.token_hex(32))
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
@@ -30,6 +33,26 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 init_db()
 
+# ---------------------------
+# AUTHENTICATION SYSTEM
+# ---------------------------
+USERS = {
+    # Admin users (email: hashed_password)
+    # Default admin - CHANGE THIS IMMEDIATELY!
+    "admin@nateladagency.com": generate_password_hash(os.getenv("ADMIN_PASSWORD", "natelad2024")),
+    # Add more users as needed:
+    # "team@nateladagency.com": generate_password_hash("yourpassword"),
+}
+
+def login_required(f):
+    """Decorator to require login"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get("logged_in"):
+            flash("Please log in to access the dashboard", "error")
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # ---------------------------
 # WhatsApp Send Helpers
@@ -190,6 +213,33 @@ def uploads(filename):
 
 
 # ---------------------------
+# AUTH ROUTES (NEW)
+# ---------------------------
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        
+        if email in USERS and check_password_hash(USERS[email], password):
+            session["logged_in"] = True
+            session["email"] = email
+            flash("✅ Welcome back! Dashboard loaded.", "success")
+            return redirect(url_for("dashboard"))
+        else:
+            flash("❌ Invalid email or password.", "error")
+    
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("👋 You have been logged out successfully.", "success")
+    return redirect(url_for("login"))
+
+
+# ---------------------------
 # Webhook Verify
 # ---------------------------
 @app.route("/webhook", methods=["GET"])
@@ -285,9 +335,10 @@ def webhook():
 
 
 # ---------------------------
-# Dashboard
+# PROTECTED DASHBOARD ROUTES
 # ---------------------------
 @app.route("/dashboard")
+@login_required
 def dashboard():
     conversations = list_conversations()
     active_phone = request.args.get("phone")
@@ -313,6 +364,7 @@ def dashboard():
 
 
 @app.route("/toggle_takeover", methods=["POST"])
+@login_required
 def toggle_takeover():
     phone = request.form["phone"]
     now = not is_takeover(phone)
@@ -325,6 +377,7 @@ def toggle_takeover():
 
 
 @app.route("/set_username", methods=["POST"])
+@login_required
 def set_username_route():
     phone = request.form["phone"]
     username = (request.form.get("username") or "").strip()
@@ -334,6 +387,7 @@ def set_username_route():
 
 
 @app.route("/send_human", methods=["POST"])
+@login_required
 def send_human():
     phone = request.form["phone"]
     text = (request.form.get("text") or "").strip()
@@ -380,6 +434,7 @@ def send_human():
 # API for live refresh polling
 # ---------------------------
 @app.route("/api/messages")
+@login_required
 def api_messages():
     phone = request.args.get("phone")
     after = int(request.args.get("after", "0"))
